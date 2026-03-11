@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Oialc採用管理</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
@@ -36,6 +36,8 @@
       min-height: 100vh;
       font-size: 14px;
       line-height: 1.5;
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
     }
 
     /* ─── Header ─── */
@@ -46,6 +48,9 @@
       top: 0;
       z-index: 100;
       box-shadow: var(--shadow);
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
+      will-change: transform;
     }
     .header-inner {
       max-width: 1280px;
@@ -614,7 +619,7 @@ const db = firebase.firestore();
 // ═══════════════════════════════════════════════
 const STATUSES   = ['選考中', '内定', '採用', '不採用', '辞退'];
 const MEDIA      = ['リジョブ', 'QJnavi', 'ジョブメドレー', 'HPBW', 'ミライズム', 'ヘアワークス', 'WORKCANVAS', 'キレイビズ', 'Mjob', 'ビューティエンジェル', 'QJ agent', 'サロンdeジョブ', '就職フェア', '紹介', 'HP', 'Instagram', 'その他'];
-const STORES     = ['渋谷店', '新宿店', '銀座店', '池袋店', '横浜店', 'その他'];
+const STORES     = ['LUCIE八王子', 'LUCIE立川', 'TRIELA吉祥寺', 'TRIELA新宿', 'TRIELA池袋'];
 const EMP_TYPES  = ['正社員', 'パート・アルバイト', '業務委託', 'その他'];
 const JOB_TYPES  = ['スタイリスト', 'アシスタント', 'エステティシャン', 'ネイリスト', 'フロント', 'マネージャー', 'その他'];
 const GENDERS    = ['女性', '男性', 'その他'];
@@ -1173,8 +1178,9 @@ function listHTML() {
                   <td>${c.紹介媒体}</td>
                   <td>${getCurrentStage(c)}</td>
                   <td><span class="badge badge-${STATUS_COLOR[c.ステータス]||'gray'}">${c.ステータス}</span></td>
-                  <td onclick="event.stopPropagation()">
+                  <td onclick="event.stopPropagation()" style="white-space:nowrap">
                     <button class="btn btn-outline btn-sm" onclick="openForm('${c.id}')">編集</button>
+                    <button class="btn btn-outline btn-sm" style="color:var(--danger);margin-left:4px" onclick="deleteCandidate('${c.id}')">削除</button>
                   </td>
                 </tr>
               `).join('')}
@@ -1199,7 +1205,10 @@ function listHTML() {
               </div>
               <div class="cand-card-footer">
                 <span class="cand-card-date">応募: ${fmtDate(c.応募日)}</span>
-                <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openForm('${c.id}')">編集</button>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openForm('${c.id}')">編集</button>
+                  <button class="btn btn-outline btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deleteCandidate('${c.id}')">削除</button>
+                </div>
               </div>
             </div>
           `).join('')}
@@ -1325,6 +1334,9 @@ function openForm(id = null) {
 
   document.getElementById('modal').style.display = 'flex';
   document.getElementById('modal').className = 'modal-overlay';
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.width = '100%';
   document.getElementById('modal').innerHTML = `
     <div class="modal">
       <button class="modal-close" onclick="closeModal()">✕</button>
@@ -1400,6 +1412,9 @@ function openForm(id = null) {
 
 function closeModal() {
   document.getElementById('modal').style.display = 'none';
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.width = '';
 }
 
 async function submitForm(e, id) {
