@@ -1308,12 +1308,12 @@ function detailHTML() {
         <div class="detail-item"><div class="detail-label">希望店舗</div><div class="detail-value">${c.希望店舗}</div></div>
         <div class="detail-item"><div class="detail-label">紹介媒体</div><div class="detail-value">${c.紹介媒体}</div></div>
         <div class="detail-item"><div class="detail-label">応募日</div><div class="detail-value">${fmtDate(c.応募日)}</div></div>
-        <div class="detail-item"><div class="detail-label">サロン見学日</div><div class="detail-value">${fmtDate(c.見学日)}</div></div>
-        <div class="detail-item"><div class="detail-label">面接日</div><div class="detail-value">${fmtDate(c.面接日)}</div></div>
+        <div class="detail-item"><div class="detail-label">サロン見学日</div><div class="detail-value">${fmtDate(c.見学日)}${c.見学時間 ? `<span style="margin-left:6px;color:var(--primary);font-weight:600">${c.見学時間}</span>` : ''}</div></div>
+        <div class="detail-item"><div class="detail-label">面接日</div><div class="detail-value">${fmtDate(c.面接日)}${c.面接時間 ? `<span style="margin-left:6px;color:var(--primary);font-weight:600">${c.面接時間}</span>` : ''}</div></div>
         <div class="detail-item"><div class="detail-label">内定日</div><div class="detail-value">${fmtDate(c.内定日)}</div></div>
         <div class="detail-item"><div class="detail-label">入社日</div><div class="detail-value">${fmtDate(c.入社日)}</div></div>
       </div>
-      ${c.備考 ? `<hr><div class="detail-item" style="margin-top:4px"><div class="detail-label">備考</div><div class="detail-value">${c.備考}</div></div>` : ''}
+      ${c.備考 ? `<hr><div class="detail-item" style="margin-top:8px"><div class="detail-label">備考</div><div class="detail-value" style="white-space:pre-wrap;line-height:1.7;background:#F8FAFC;border-radius:8px;padding:10px 12px;margin-top:4px;font-size:14px">${c.備考}</div></div>` : ''}
       ${c.updatedAt ? `<div style="margin-top:12px;font-size:12px;color:#94a3b8;text-align:right">最終更新: ${fmtDateTime(c.updatedAt)}</div>` : ''}
     </div>
   `;
@@ -1386,11 +1386,17 @@ function openForm(id = null) {
           </div>
           <div class="form-group">
             <label class="form-label">サロン見学日</label>
-            <input type="date" class="form-input" name="見学日" value="${v('見学日')}">
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="date" class="form-input" name="見学日" value="${v('見学日')}" style="flex:1;min-width:0">
+              <input type="time" class="form-input" name="見学時間" value="${v('見学時間')}" style="width:110px;flex-shrink:0">
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">面接日</label>
-            <input type="date" class="form-input" name="面接日" value="${v('面接日')}">
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="date" class="form-input" name="面接日" value="${v('面接日')}" style="flex:1;min-width:0">
+              <input type="time" class="form-input" name="面接時間" value="${v('面接時間')}" style="width:110px;flex-shrink:0">
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">内定日</label>
@@ -1426,6 +1432,7 @@ async function submitForm(e, id) {
   const data = Object.fromEntries(new FormData(e.target).entries());
   if (data.年齢) data.年齢 = parseInt(data.年齢);
   ['見学日','面接日','内定日','入社日'].forEach(k => { if (!data[k]) data[k] = null; });
+  ['見学時間','面接時間'].forEach(k => { if (!data[k]) data[k] = null; });
 
   const now = new Date().toISOString();
   if (id) {
