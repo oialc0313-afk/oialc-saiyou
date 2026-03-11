@@ -338,6 +338,8 @@
       justify-content: center;
       padding: 32px 16px;
       overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
     .modal {
       background: white;
@@ -384,10 +386,11 @@
       padding: 8px 11px;
       border: 1px solid var(--border);
       border-radius: 7px;
-      font-size: 13.5px;
+      font-size: 16px;
       outline: none;
       font-family: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
+      touch-action: manipulation;
     }
     .form-input:focus, .form-select:focus, .form-textarea:focus {
       border-color: var(--primary);
@@ -600,13 +603,22 @@
       .main { padding: 12px; }
 
       /* Modal: sheet from bottom */
-      .modal-overlay { padding: 0; align-items: flex-end; }
+      .modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+        overscroll-behavior: contain;
+      }
       .modal {
         border-radius: 16px 16px 0 0;
         max-width: 100%;
         padding: 20px 16px 40px;
+        max-height: 92dvh;
         max-height: 92vh;
         overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
       }
 
       /* Funnel */
@@ -937,8 +949,7 @@ function fmtDateTime(iso) {
     + ' ' + dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 }
 function getUniqueStores() {
-  const all = state.candidates.map(c => c.希望店舗).filter(Boolean);
-  return [...new Set([...STORES, ...all])].sort();
+  return STORES;
 }
 
 function getStageIdx(c) {
@@ -1473,8 +1484,10 @@ function openForm(id = null) {
           </div>
           <div class="form-group">
             <label class="form-label">希望店舗</label>
-            <input list="stores-dl" class="form-input" name="希望店舗" value="${v('希望店舗')}" placeholder="店舗名を入力または選択" autocomplete="off">
-            <datalist id="stores-dl">${getUniqueStores().map(s=>`<option value="${s}">`).join('')}</datalist>
+            <select class="form-select" name="希望店舗">
+              <option value="">選択してください</option>
+              ${STORES.map(s=>`<option value="${s}" ${v('希望店舗')===s?'selected':''}>${s}</option>`).join('')}
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">紹介媒体</label>
