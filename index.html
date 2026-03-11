@@ -12,6 +12,33 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.75); }
+    }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .sync-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1F2937;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      z-index: 9999;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      animation: toast-in 0.25s ease;
+      white-space: nowrap;
+    }
 
     :root {
       --primary: #4F46E5;
@@ -86,22 +113,25 @@
       font-size: 15px;
       font-weight: 700;
     }
-    .nav { display: flex; gap: 2px; }
+    .nav { display: flex; gap: 4px; background: #F1F0FF; border-radius: 10px; padding: 3px; }
     .nav-btn {
-      padding: 6px 14px;
-      border-radius: 6px;
+      padding: 7px 18px;
+      border-radius: 8px;
       border: none;
       background: none;
       cursor: pointer;
       font-size: 13.5px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--text-secondary);
-      transition: all 0.15s;
+      transition: all 0.18s;
       white-space: nowrap;
       -webkit-tap-highlight-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 5px;
     }
-    .nav-btn:hover { background: #F3F4F6; color: var(--text); }
-    .nav-btn.active { background: var(--primary-light); color: var(--primary); }
+    .nav-btn:hover { background: rgba(255,255,255,0.7); color: var(--primary); }
+    .nav-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(79,70,229,0.25); }
     .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
     /* ─── Buttons ─── */
@@ -512,17 +542,18 @@
       .nav {
         order: 3;
         width: 100%;
-        border-top: 1px solid var(--border);
-        padding-top: 2px;
-        margin-bottom: 2px;
-        gap: 2px;
+        margin-top: 6px;
+        margin-bottom: 4px;
+        gap: 3px;
+        padding: 3px;
       }
       .nav-btn {
         flex: 1;
         text-align: center;
         justify-content: center;
-        padding: 5px 6px;
-        font-size: 12px;
+        padding: 8px 6px;
+        font-size: 13px;
+        font-weight: 700;
       }
       .logo-text { font-size: 13px; }
       .logo-text .by-oialc { display: none; }
@@ -588,6 +619,9 @@
       <div class="logo">
         <div class="logo-icon">L</div>
         <span class="logo-text">LIBERTY採用管理 <span class="by-oialc" style="font-size:11px;font-weight:400;color:#9CA3AF">by Oialc</span></span>
+        <span id="live-dot" title="リアルタイム同期中" style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;color:#10B981;margin-left:2px">
+          <span style="width:7px;height:7px;background:#10B981;border-radius:50%;display:inline-block;animation:pulse-dot 2s ease-in-out infinite"></span>LIVE
+        </span>
       </div>
       <nav class="nav" id="nav">
         <button class="nav-btn active" onclick="navigate('dashboard')">📊 ダッシュボード</button>
@@ -668,9 +702,33 @@ const SAMPLE = [
 // ═══════════════════════════════════════════════
 //  STORAGE
 // ═══════════════════════════════════════════════
+let _syncToastTimer = null;
+let _isFirstLoad = true;
+function showSyncToast(msg) {
+  if (_syncToastTimer) clearTimeout(_syncToastTimer);
+  let t = document.getElementById('sync-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'sync-toast';
+    t.className = 'sync-toast';
+    document.body.appendChild(t);
+  }
+  t.innerHTML = `<span style="width:8px;height:8px;background:#10B981;border-radius:50%;display:inline-block"></span>${msg}`;
+  t.style.display = 'flex';
+  _syncToastTimer = setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
 function initFirestore() {
   db.collection('candidates').onSnapshot(snapshot => {
+    const prev = state.candidates.length;
     state.candidates = snapshot.docs.map(doc => ({ ...doc.data() }));
+    if (_isFirstLoad) {
+      _isFirstLoad = false;
+    } else {
+      const diff = state.candidates.length - prev;
+      if (diff > 0) showSyncToast('新しいデータが追加されました');
+      else if (diff < 0) showSyncToast('データが削除されました');
+      else showSyncToast('データが更新されました');
+    }
     renderPage();
   }, err => console.error('Firestore error:', err));
 }
