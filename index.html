@@ -741,7 +741,7 @@ function exportData() {
   a.click();
 }
 function buildCSV() {
-  const headers = ['応募日','氏名','年齢','性別','雇用形態','職種','希望店舗','紹介媒体','ステータス','見学日','面接日','内定日','入社日','備考'];
+  const headers = ['応募日','氏名','年齢','性別','雇用形態','職種','希望店舗','紹介媒体','ステータス','見学日','見学時間','面接日','面接時間','内定日','入社日','成果報酬金額','備考'];
   const rows = state.candidates.map(c =>
     headers.map(h => JSON.stringify(c[h] ?? '')).join(',')
   );
@@ -774,46 +774,47 @@ function getMediaStats() {
   const stats = {};
   state.candidates.forEach(c => {
     const m = c.紹介媒体 || 'その他';
-    if (!stats[m]) stats[m] = { total:0, hired:0 };
+    if (!stats[m]) stats[m] = { total:0, hired:0, perfAmount:0 };
     stats[m].total++;
     if (c.ステータス === '採用') stats[m].hired++;
+    if (c.入社日 && c.成果報酬金額) stats[m].perfAmount += parseInt(c.成果報酬金額) || 0;
   });
   return stats;
 }
 function computeGrandTotal() {
   const stats = getMediaStats();
-  let monthly = 0, perf = 0;
-  Object.keys(stats).forEach(m => {
-    monthly += getFee(m, '月額');
-    perf += getFee(m, '成果報酬') * (stats[m]?.hired || 0);
-  });
+  let monthly = 0;
+  Object.keys(stats).forEach(m => { monthly += getFee(m, '月額'); });
+  const perf = state.candidates
+    .filter(c => c.入社日 && c.成果報酬金額)
+    .reduce((sum, c) => sum + (parseInt(c.成果報酬金額) || 0), 0);
   return { monthly, perf, total: monthly + perf };
 }
 function updateFeeCell(media, type, value, rowId) {
   setFee(media, type, value);
   saveFees();
   const stats = getMediaStats();
-  const s = stats[media] || { hired: 0 };
-  const rowTotal = getFee(media, '月額') + getFee(media, '成果報酬') * s.hired;
+  const s = stats[media] || { hired: 0, perfAmount: 0 };
+  const rowTotal = getFee(media, '月額') + (s.perfAmount || 0);
   const rowEl = document.getElementById(rowId);
-  if (rowEl) rowEl.textContent = rowTotal > 0 ? rowTotal.toLocaleString('ja-JP') + '円' : '—';
+  if (rowEl) rowEl.textContent = rowTotal > 0 ? fmtMoney(rowTotal) : '—';
   const { monthly, perf, total } = computeGrandTotal();
   const grandEl = document.getElementById('fee-grand');
   if (grandEl) grandEl.innerHTML =
-    `<div>${total > 0 ? total.toLocaleString('ja-JP') + '円' : '—'}</div>` +
-    `<div style="font-size:11px;font-weight:400;color:var(--text-secondary);margin-top:2px">月額 ${monthly.toLocaleString('ja-JP')}円 ＋ 成果報酬 ${perf.toLocaleString('ja-JP')}円</div>`;
+    `<div>${total > 0 ? fmtMoney(total) : '—'}</div>` +
+    `<div style="font-size:11px;font-weight:400;color:var(--text-secondary);margin-top:2px">月額 ${fmtMoney(monthly)} ＋ 成果報酬 ${fmtMoney(perf)}</div>`;
   const kpiEl = document.getElementById('cost-kpi-value');
-  if (kpiEl) kpiEl.textContent = total > 0 ? '¥' + total.toLocaleString('ja-JP') : '—';
+  if (kpiEl) kpiEl.textContent = total > 0 ? fmtMoney(total) : '—';
 }
 function mediaFeesTableHTML() {
   const stats = getMediaStats();
   const rows = Object.entries(stats).sort((a,b) => b[1].total - a[1].total);
   if (!rows.length) return '<div class="text-secondary text-sm" style="padding:12px">データなし</div>';
   const { monthly, perf, total } = computeGrandTotal();
-  const inputStyle = 'width:86px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;text-align:right';
+  const inputStyle = 'width:100px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;text-align:right';
   return `
     <div style="overflow-x:auto">
-    <table class="media-table" style="width:100%;min-width:700px">
+    <table class="media-table" style="width:100%;min-width:680px">
       <thead>
         <tr>
           <th>媒体</th>
@@ -821,7 +822,7 @@ function mediaFeesTableHTML() {
           <th style="text-align:right">採用</th>
           <th style="text-align:right">採用率</th>
           <th>月額利用料</th>
-          <th>成果報酬単価</th>
+          <th style="text-align:right">成果報酬金額</th>
           <th style="text-align:right">コスト合計</th>
         </tr>
       </thead>
@@ -829,9 +830,9 @@ function mediaFeesTableHTML() {
         ${rows.map(([m, s], i) => {
           const r = Math.round(s.hired / s.total * 100);
           const col = r >= 40 ? 'var(--success)' : r >= 20 ? 'var(--warning)' : 'var(--danger)';
-          const monthly = getFee(m, '月額');
-          const perf    = getFee(m, '成果報酬');
-          const rowTotal = monthly + perf * s.hired;
+          const monthlyFee = getFee(m, '月額');
+          const perfAmount = s.perfAmount || 0;
+          const rowTotal = monthlyFee + perfAmount;
           const rid  = 'fr' + i;
           const mEsc = m.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
           return `
@@ -845,20 +846,17 @@ function mediaFeesTableHTML() {
               </td>
               <td>
                 <div style="display:flex;align-items:center;gap:4px">
-                  <input type="number" value="${monthly}" min="0" step="1000" style="${inputStyle}"
+                  <span style="color:var(--text-secondary);font-size:13px">¥</span>
+                  <input type="number" value="${monthlyFee}" min="0" step="1000" style="${inputStyle}"
                     onchange="updateFeeCell('${mEsc}','月額',this.value,'${rid}')">
-                  <span style="font-size:11px;color:var(--text-secondary)">円/月</span>
                 </div>
               </td>
-              <td>
-                <div style="display:flex;align-items:center;gap:4px">
-                  <input type="number" value="${perf}" min="0" step="10000" style="${inputStyle}"
-                    onchange="updateFeeCell('${mEsc}','成果報酬',this.value,'${rid}')">
-                  <span style="font-size:11px;color:var(--text-secondary)">円/採用</span>
-                </div>
+              <td style="text-align:right;font-weight:600;color:var(--primary)">
+                ${fmtMoney(perfAmount)}
+                ${s.hired > 0 ? `<div style="font-size:10px;font-weight:400;color:var(--text-secondary)">${s.hired}名分</div>` : ''}
               </td>
-              <td style="text-align:right;font-weight:600" id="${rid}">
-                ${rowTotal > 0 ? rowTotal.toLocaleString('ja-JP') + '円' : '—'}
+              <td style="text-align:right;font-weight:700" id="${rid}">
+                ${fmtMoney(rowTotal)}
               </td>
             </tr>
           `;
@@ -866,10 +864,11 @@ function mediaFeesTableHTML() {
       </tbody>
       <tfoot>
         <tr style="background:#F9FAFB">
-          <td colspan="6" style="padding:10px 8px;font-weight:700">合計</td>
+          <td colspan="5" style="padding:10px 8px;font-weight:700">合計</td>
+          <td style="text-align:right;padding:10px 8px;font-weight:700;color:var(--primary)">${fmtMoney(perf)}</td>
           <td style="text-align:right;padding:10px 8px;font-weight:700;color:var(--primary)" id="fee-grand">
-            <div>${total > 0 ? total.toLocaleString('ja-JP') + '円' : '—'}</div>
-            <div style="font-size:11px;font-weight:400;color:var(--text-secondary);margin-top:2px">月額 ${monthly.toLocaleString('ja-JP')}円 ＋ 成果報酬 ${perf.toLocaleString('ja-JP')}円</div>
+            <div>${total > 0 ? fmtMoney(total) : '—'}</div>
+            <div style="font-size:10px;font-weight:400;color:var(--text-secondary);margin-top:2px">月額 ${fmtMoney(monthly)} ＋ 成果報酬 ${fmtMoney(perf)}</div>
           </td>
         </tr>
       </tfoot>
@@ -891,6 +890,12 @@ function fmtDateShort(d) {
   if (!d) return '—';
   const dt = new Date(d + 'T00:00:00');
   return dt.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+}
+function fmtMoney(n) {
+  if (!n && n !== 0) return '—';
+  const num = parseInt(n) || 0;
+  if (num === 0) return '—';
+  return '¥' + num.toLocaleString('ja-JP');
 }
 function fmtDateTime(iso) {
   if (!iso) return '—';
@@ -1370,6 +1375,7 @@ function detailHTML() {
         <div class="detail-item"><div class="detail-label">面接日</div><div class="detail-value">${fmtDate(c.面接日)}${c.面接時間 ? `<span style="margin-left:6px;color:var(--primary);font-weight:600">${c.面接時間}</span>` : ''}</div></div>
         <div class="detail-item"><div class="detail-label">内定日</div><div class="detail-value">${fmtDate(c.内定日)}</div></div>
         <div class="detail-item"><div class="detail-label">入社日</div><div class="detail-value">${fmtDate(c.入社日)}</div></div>
+        ${c.成果報酬金額 ? `<div class="detail-item" style="grid-column:1/-1"><div class="detail-label">成果報酬金額</div><div class="detail-value" style="font-size:18px;font-weight:700;color:var(--primary)">${fmtMoney(c.成果報酬金額)}</div></div>` : ''}
       </div>
       ${c.備考 ? `<hr><div class="detail-item" style="margin-top:8px"><div class="detail-label">備考</div><div class="detail-value" style="white-space:pre-wrap;line-height:1.7;background:#F8FAFC;border-radius:8px;padding:10px 12px;margin-top:4px;font-size:14px">${c.備考}</div></div>` : ''}
       ${c.updatedAt ? `<div style="margin-top:12px;font-size:12px;color:#94a3b8;text-align:right">最終更新: ${fmtDateTime(c.updatedAt)}</div>` : ''}
@@ -1464,6 +1470,13 @@ function openForm(id = null) {
             <label class="form-label">入社日</label>
             <input type="date" class="form-input" name="入社日" value="${v('入社日')}">
           </div>
+          <div class="form-group">
+            <label class="form-label">成果報酬金額 <span style="font-size:11px;font-weight:400;color:var(--text-secondary)">（入社確定後に入力）</span></label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:15px;font-weight:600;color:var(--text-secondary)">¥</span>
+              <input type="number" class="form-input" name="成果報酬金額" value="${v('成果報酬金額') || ''}" placeholder="0" min="0" step="1000" style="flex:1">
+            </div>
+          </div>
           <div class="form-group full">
             <label class="form-label">備考</label>
             <textarea class="form-textarea" name="備考" placeholder="特記事項があれば入力">${v('備考')}</textarea>
@@ -1489,6 +1502,9 @@ async function submitForm(e, id) {
   e.preventDefault();
   const data = Object.fromEntries(new FormData(e.target).entries());
   if (data.年齢) data.年齢 = parseInt(data.年齢);
+  if (data.成果報酬金額 !== '' && data.成果報酬金額 !== undefined) {
+    data.成果報酬金額 = parseInt(data.成果報酬金額) || null;
+  } else { data.成果報酬金額 = null; }
   ['見学日','面接日','内定日','入社日'].forEach(k => { if (!data[k]) data[k] = null; });
   ['見学時間','面接時間'].forEach(k => { if (!data[k]) data[k] = null; });
 
