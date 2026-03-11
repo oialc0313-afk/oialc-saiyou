@@ -1486,7 +1486,7 @@ function openForm(id = null) {
             <label class="form-label">希望店舗</label>
             <select class="form-select" name="希望店舗">
               <option value="">選択してください</option>
-              ${STORES.map(s=>`<option value="${s}" ${v('希望店舗')===s?'selected':''}>${s}</option>`).join('')}
+              ${selOpts(STORES,'希望店舗')}
             </select>
           </div>
           <div class="form-group">
