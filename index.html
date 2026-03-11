@@ -82,8 +82,10 @@
     .header {
       background: var(--white);
       border-bottom: 1px solid var(--border);
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
       box-shadow: var(--shadow);
       -webkit-backface-visibility: hidden;
@@ -168,6 +170,7 @@
       max-width: 1280px;
       margin: 0 auto;
       padding: 28px 24px;
+      padding-top: 88px;
     }
     .page-header {
       display: flex;
@@ -600,7 +603,7 @@
       /* Layout */
       .card { padding: 14px; }
       .page-title { font-size: 17px; }
-      .main { padding: 12px; }
+      .main { padding: 12px; padding-top: 116px; }
 
       /* Modal: sheet from bottom */
       .modal-overlay {
