@@ -385,6 +385,23 @@
       box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
     }
     .form-textarea { resize: vertical; min-height: 72px; }
+    .btn-clear-date {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #F9FAFB;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-clear-date:hover { background: #FEE2E2; border-color: var(--danger); color: var(--danger); }
 
     /* ─── Timeline ─── */
     .timeline {
@@ -1450,25 +1467,33 @@ function openForm(id = null) {
           </div>
           <div class="form-group">
             <label class="form-label">サロン見学日</label>
-            <div style="display:flex;gap:8px;align-items:center">
+            <div class="date-group" style="display:flex;gap:6px;align-items:center">
               <input type="date" class="form-input" name="見学日" value="${v('見学日')}" style="flex:1;min-width:0">
-              <input type="time" class="form-input" name="見学時間" value="${v('見学時間')}" style="width:110px;flex-shrink:0">
+              <input type="time" class="form-input" name="見学時間" value="${v('見学時間')}" style="width:100px;flex-shrink:0">
+              <button type="button" class="btn-clear-date" title="クリア" onclick="this.closest('.date-group').querySelectorAll('input').forEach(i=>i.value='')">✕</button>
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">面接日</label>
-            <div style="display:flex;gap:8px;align-items:center">
+            <div class="date-group" style="display:flex;gap:6px;align-items:center">
               <input type="date" class="form-input" name="面接日" value="${v('面接日')}" style="flex:1;min-width:0">
-              <input type="time" class="form-input" name="面接時間" value="${v('面接時間')}" style="width:110px;flex-shrink:0">
+              <input type="time" class="form-input" name="面接時間" value="${v('面接時間')}" style="width:100px;flex-shrink:0">
+              <button type="button" class="btn-clear-date" title="クリア" onclick="this.closest('.date-group').querySelectorAll('input').forEach(i=>i.value='')">✕</button>
             </div>
           </div>
           <div class="form-group">
             <label class="form-label">内定日</label>
-            <input type="date" class="form-input" name="内定日" value="${v('内定日')}">
+            <div class="date-group" style="display:flex;gap:6px;align-items:center">
+              <input type="date" class="form-input" name="内定日" value="${v('内定日')}" style="flex:1;min-width:0">
+              <button type="button" class="btn-clear-date" title="クリア" onclick="this.closest('.date-group').querySelectorAll('input').forEach(i=>i.value='')">✕</button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">入社日</label>
-            <input type="date" class="form-input" name="入社日" value="${v('入社日')}">
+            <div class="date-group" style="display:flex;gap:6px;align-items:center">
+              <input type="date" class="form-input" name="入社日" value="${v('入社日')}" style="flex:1;min-width:0">
+              <button type="button" class="btn-clear-date" title="クリア" onclick="this.closest('.date-group').querySelectorAll('input').forEach(i=>i.value='')">✕</button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label">成果報酬金額 <span style="font-size:11px;font-weight:400;color:var(--text-secondary)">（入社確定後に入力）</span></label>
